@@ -5165,8 +5165,10 @@ void CEulerSolver::Upwind_Residual(CGeometry *geometry, CSolver **solver_contain
   bool ideal_gas        = (config->GetKind_FluidModel() == STANDARD_AIR || config->GetKind_FluidModel() == IDEAL_GAS );
   bool low_mach_corr    = config->Low_Mach_Correction();
 
+  su2double  dissipation;
+    
   /*--- Loop over all the edges ---*/
-  
+
   for (iEdge = 0; iEdge < geometry->GetnEdge(); iEdge++) {
     
     /*--- Points in edge and normal vectors ---*/
@@ -5242,6 +5244,375 @@ void CEulerSolver::Upwind_Residual(CGeometry *geometry, CSolver **solver_contain
           Primitive_i[iVar] = V_i[iVar] + Project_Grad_i;
           Primitive_j[iVar] = V_j[iVar] + Project_Grad_j;
         }
+      }
+
+      /*--- Roe Low Dissipation ---*/
+      if (config->GetKind_RoeLowDiss() == FD){
+            su2double uijuij, nu, nut, dist_wall, k2, r_d, f_d_i, f_d_j;
+        
+            unsigned short jDim;
+            
+            /*--- For iPoint ---*/
+            
+            dist_wall = geometry->node[iPoint]->GetWall_Distance();
+            uijuij=0.0;
+            
+            for(iDim=0;iDim<nDim;++iDim){
+                for(jDim=0;jDim<nDim;++jDim){
+                    uijuij+= Gradient_i[1+iDim][jDim]*Gradient_i[1+iDim][jDim];}}
+            
+            uijuij=sqrt(fabs(uijuij));
+            uijuij=max(uijuij,1e-10);
+          
+          
+            nu = V_i[nDim+5]/V_i[nDim+2];
+            nut = V_i[nDim+6]/V_i[nDim+2];
+            k2=pow(0.41,2.0);
+            r_d= (nut+nu)/(uijuij*k2*pow(dist_wall, 2.0));
+            f_d_i= 1.0-tanh(pow(8.0*r_d,3.0));
+
+            /*--- For jPoint ---*/
+            
+            dist_wall = geometry->node[jPoint]->GetWall_Distance();
+            uijuij=0.0;
+            
+            for(iDim=0;iDim<nDim;++iDim){
+                for(jDim=0;jDim<nDim;++jDim){
+                    uijuij+= Gradient_j[1+iDim][jDim]*Gradient_j[1+iDim][jDim];}}
+            
+            uijuij=sqrt(fabs(uijuij));
+            uijuij=max(uijuij,1e-10);
+            
+            nu = V_j[nDim+5]/V_j[nDim+2];
+            nut = V_j[nDim+6]/V_j[nDim+2];
+            k2=pow(0.41,2.0);
+            r_d= (nut+nu)/(uijuij*k2*pow(dist_wall, 2.0));
+            f_d_j= 1.0-tanh(pow(8.0*r_d,3.0));
+                      
+            dissipation = max(0.05,1.0 - (0.5 * (f_d_i + f_d_j)));
+            numerics->SetRoeDissipation(dissipation);
+        }
+      else if(config->GetKind_RoeLowDiss() == NTS){
+          
+          su2double Delta_aux, Laminar_Viscosity_aux, Eddy_Viscosity_aux, StrainMag_aux, *Vorticity_aux, Omega_aux;
+          su2double Baux, Gaux, TimeScale, Kaux, Lturb, Aaux, phi_hybrid_i, phi_hybrid_j,Omega_2, StrainMag_2, inv_TimeScale;
+          su2double ch1 = 3.0, ch2 = 1.0, ch3 = 2.0, cnu = 0.09, phi_max = 1.0;
+          su2double Const_DES=0.65;
+          su2double *Coord_i, *Coord_j;
+          
+          Coord_i = geometry->node[iPoint]->GetCoord();
+          Coord_j = geometry->node[jPoint]->GetCoord();
+          Delta_aux = 0.0;
+          for (iDim=0;iDim<nDim;++iDim)
+              Delta_aux += pow((Coord_j[iDim]-Coord_i[iDim]),2.);
+          Delta_aux=sqrt(Delta_aux);
+          
+          /*--- For iPoint ---*/
+          
+          Laminar_Viscosity_aux = V_i[nDim+5] /V_i[nDim+2];
+          Eddy_Viscosity_aux = V_i[nDim+6]/V_i[nDim+2];
+          StrainMag_aux = node[iPoint]->GetStrainMag();
+          Vorticity_aux = node[iPoint]->GetVorticity();
+          Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+          
+          Omega_2 = pow(Omega_aux,2.0);
+          StrainMag_2 = pow(StrainMag_aux,2.0);
+          Baux = (ch3 * Omega_aux * max(StrainMag_aux, Omega_aux)) / max(sqrt((StrainMag_2+Omega_2)*0.5),1E-20);
+          Gaux = tanh(pow(Baux,4.0));
+          TimeScale = config->GetLength_Ref() / config->GetModVel_FreeStream();
+          
+          inv_TimeScale = 1.0/TimeScale;
+          
+          Kaux = max(sqrt((Omega_2 + StrainMag_2)*0.5), 0.1 * inv_TimeScale);
+          
+          Lturb = sqrt((Eddy_Viscosity_aux + Laminar_Viscosity_aux)/(pow(cnu,1.5)*Kaux));
+          Aaux = ch2 * max(((Const_DES*Delta_aux)/(Lturb*Gaux)) - 0.5, 0.0);
+          phi_hybrid_i = phi_max * tanh(pow(Aaux,ch1));
+
+          /*--- For jPoint ---*/
+          
+          Laminar_Viscosity_aux = V_j[nDim+5] /V_j[nDim+2];
+          Eddy_Viscosity_aux = V_j[nDim+6]/V_j[nDim+2];
+          StrainMag_aux = node[jPoint]->GetStrainMag();
+          Vorticity_aux = node[jPoint]->GetVorticity();
+          Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+          
+          Omega_2 = pow(Omega_aux,2.0);
+          StrainMag_2 = pow(StrainMag_aux,2.0);
+          Baux = (ch3 * Omega_aux * max(StrainMag_aux, Omega_aux)) / max(sqrt((StrainMag_2+Omega_2)*0.5),1E-20);
+          Gaux = tanh(pow(Baux,4.0));
+          TimeScale = config->GetLength_Ref() / config->GetModVel_FreeStream();
+          
+          //cout<< config->GetLength_Ref() << " " << config->GetModVel_FreeStream() << endl;
+          
+          inv_TimeScale = 1.0/TimeScale;
+          
+          Kaux = max(sqrt((Omega_2 + StrainMag_2)*0.5), 0.1 * inv_TimeScale);
+          
+          Lturb = sqrt((Eddy_Viscosity_aux + Laminar_Viscosity_aux)/(pow(cnu,1.5)*Kaux));
+          Aaux = ch2 * max(((Const_DES*Delta_aux)/(Lturb*Gaux)) - 0.5, 0.0);
+          phi_hybrid_j = phi_max * tanh(pow(Aaux,ch1));
+
+          dissipation = max(0.5*(phi_hybrid_i+phi_hybrid_j),0.05);
+          numerics->SetRoeDissipation(dissipation);
+          //cout << dissipation << endl;
+          
+      }
+       else if (config->GetKind_RoeLowDiss() == FD_DUCROS){
+            su2double uijuij, nu, nut, dist_wall, k2, r_d, f_d_i, f_d_j;
+           su2double *Vorticity_aux, Omega_aux, ujxj, Ducros_i, Ducros_j, Ducros_ij;
+           unsigned short jDim;
+//           su2double  **Gradient_aux;
+//           unsigned short nNeigh, iNeigh, NumNeigh;
+//           su2double *Coord_i, *Coord_j;
+//           Coord_i = geometry->node[iPoint]->GetCoord();
+//           Coord_j = geometry->node[jPoint]->GetCoord();
+
+            /*--- For iPoint ---*/
+            
+            dist_wall = geometry->node[iPoint]->GetWall_Distance();
+            uijuij=0.0;
+            
+            for(iDim=0;iDim<nDim;++iDim){
+                for(jDim=0;jDim<nDim;++jDim){
+                    uijuij+= Gradient_i[1+iDim][jDim]*Gradient_i[1+iDim][jDim];}}
+            
+            uijuij=sqrt(fabs(uijuij));
+            uijuij=max(uijuij,1e-10);
+            
+            
+            nu = V_i[nDim+5]/V_i[nDim+2];
+            nut = V_i[nDim+6]/V_i[nDim+2];
+            k2=pow(0.41,2.0);
+            r_d= (nut+nu)/(uijuij*k2*pow(dist_wall, 2.0));
+            f_d_i= 1.0-tanh(pow(8.0*r_d,3.0));
+           
+           /*---- Ducros sensor for iPoint ---*/
+           
+           Vorticity_aux = node[iPoint]->GetVorticity();
+           Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+
+           /*---- Dilatation for iPoint ---*/
+           ujxj=0.0;
+           for(iDim=0;iDim<nDim;++iDim){
+                   ujxj+= Gradient_i[1+iDim][iDim];}
+           
+           Ducros_i = -ujxj /(fabs(ujxj)+ Omega_aux + 1.0e-20);
+           
+           /*---- Ducros sensor for neighbor points of iPoint to avoid lower the dissipation in regions near the shock ---*/
+           
+           
+//           nNeigh = geometry->node[iPoint]->GetnPoint();
+//           for (iNeigh=0;iNeigh<nNeigh;++iNeigh){
+//               NumNeigh = geometry->node[iPoint]->GetPoint(iNeigh);
+//               Gradient_aux = node[NumNeigh]->GetGradient_Primitive();
+//               Vorticity_aux = node[NumNeigh]->GetVorticity();
+//               Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+//               
+//               ujxj=0.0;
+//               for(iDim=0;iDim<nDim;++iDim){
+//                   ujxj+= Gradient_aux[1+iDim][iDim];}
+//               
+//               Ducros_i += -ujxj /(fabs(ujxj)+ Omega_aux + 1.0e-20);
+//           }
+//           Ducros_i = Ducros_i/(nNeigh + 1.0);
+           
+            /*--- For jPoint ---*/
+            
+            dist_wall = geometry->node[jPoint]->GetWall_Distance();
+            uijuij=0.0;
+            
+            for(iDim=0;iDim<nDim;++iDim){
+                for(jDim=0;jDim<nDim;++jDim){
+                    uijuij+= Gradient_j[1+iDim][jDim]*Gradient_j[1+iDim][jDim];}}
+            
+            uijuij=sqrt(fabs(uijuij));
+            uijuij=max(uijuij,1e-10);
+            
+            nu = V_j[nDim+5]/V_j[nDim+2];
+            nut = V_j[nDim+6]/V_j[nDim+2];
+            k2=pow(0.41,2.0);
+            r_d= (nut+nu)/(uijuij*k2*pow(dist_wall, 2.0));
+            f_d_j= 1.0-tanh(pow(8.0*r_d,3.0));
+           
+           /*---- Ducros sensor for jPoint ---*/
+           
+           Vorticity_aux = node[jPoint]->GetVorticity();
+           Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+           
+           /*---- Dilatation for jPoint ---*/
+           ujxj=0.0;
+           for(iDim=0;iDim<nDim;++iDim){
+               ujxj+= Gradient_j[1+iDim][iDim];}
+           
+           Ducros_j = -ujxj /(fabs(ujxj)+ Omega_aux + 1.0e-20);
+           
+           /*---- Ducros sensor for neighbor points of jPoint to avoid lower the dissipation in regions near the shock ---*/
+           
+//           nNeigh = geometry->node[jPoint]->GetnPoint();
+//           for (iNeigh=0;iNeigh<nNeigh;++iNeigh){
+//               NumNeigh = geometry->node[jPoint]->GetPoint(iNeigh);
+//               Gradient_aux = node[NumNeigh]->GetGradient_Primitive();
+//               Vorticity_aux = node[NumNeigh]->GetVorticity();
+//               Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+//               
+//               ujxj=0.0;
+//               for(iDim=0;iDim<nDim;++iDim){
+//                   ujxj+= Gradient_aux[1+iDim][iDim];}
+//               
+//               Ducros_j += -ujxj /(fabs(ujxj)+ Omega_aux + 1.0e-20);
+//           }
+//           Ducros_j = Ducros_j/(nNeigh + 1.0);
+
+           /*--- See Jonhsen et al. JCP 229 (2010) pag. 1234 ---*/
+           
+            if (0.5*(Ducros_i + Ducros_j) > 0.65)
+                Ducros_ij = 1.0;
+            else
+                Ducros_ij = 0.05;
+           
+            dissipation = max(Ducros_ij,1.0 - (0.5 * (f_d_i + f_d_j)));
+            numerics->SetRoeDissipation(dissipation);
+        }
+
+      else if(config->GetKind_RoeLowDiss() == NTS_DUCROS){
+          
+          su2double Delta_aux, Laminar_Viscosity_aux, Eddy_Viscosity_aux, StrainMag_aux, *Vorticity_aux, Omega_aux;
+          su2double Baux, Gaux, TimeScale, Kaux, Lturb, Aaux, phi_hybrid_i, phi_hybrid_j,Omega_2, StrainMag_2, inv_TimeScale;
+          su2double ch1 = 3.0, ch2 = 1.0, ch3 = 2.0, cnu = 0.09, phi_max = 1.0;
+          su2double Const_DES=0.65, uijuij, **Gradient_aux, Ducros_i, Ducros_aux, Ducros_j, phi1, phi2;
+          su2double *Coord_i, *Coord_j;
+          unsigned short jDim, nNeigh, iNeigh, NumNeigh;
+          
+          Coord_i = geometry->node[iPoint]->GetCoord();
+          Coord_j = geometry->node[jPoint]->GetCoord();
+          Delta_aux = 0.0;
+          for (iDim=0;iDim<nDim;++iDim)
+              Delta_aux += pow((Coord_j[iDim]-Coord_i[iDim]),2.);
+          Delta_aux=sqrt(Delta_aux);
+          
+          /*--- For iPoint ---*/
+          
+          Laminar_Viscosity_aux = V_i[nDim+5] /V_i[nDim+2];
+          Eddy_Viscosity_aux = V_i[nDim+6]/V_i[nDim+2];
+          StrainMag_aux = node[iPoint]->GetStrainMag();
+          Vorticity_aux = node[iPoint]->GetVorticity();
+          Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+          
+          Omega_2 = pow(Omega_aux,2.0);
+          StrainMag_2 = pow(StrainMag_aux,2.0);
+          Baux = (ch3 * Omega_aux * max(StrainMag_aux, Omega_aux)) / max(sqrt((StrainMag_2+Omega_2)*0.5),1E-20);
+          Gaux = tanh(pow(Baux,4.0));
+          TimeScale = config->GetLength_Ref() / config->GetModVel_FreeStream();
+          
+          inv_TimeScale = 1.0/TimeScale;
+          
+          Kaux = max(sqrt((Omega_2 + StrainMag_2)*0.5), 0.1 * inv_TimeScale);
+          
+          Lturb = sqrt((Eddy_Viscosity_aux + Laminar_Viscosity_aux)/(pow(cnu,1.5)*Kaux));
+          Aaux = ch2 * max(((Const_DES*Delta_aux)/(Lturb*Gaux)) - 0.5, 0.0);
+          phi_hybrid_i = phi_max * tanh(pow(Aaux,ch1));
+          
+          /*---- Ducros sensor for iPoint ---*/
+          uijuij=0.0;
+          
+          for(iDim=0;iDim<nDim;++iDim){
+              for(jDim=0;jDim<nDim;++jDim){
+                  uijuij+= Gradient_i[1+iDim][jDim]*Gradient_i[1+iDim][jDim];}}
+          
+          uijuij=sqrt(fabs(uijuij));
+          uijuij=max(uijuij,1e-10);
+
+          Ducros_i = pow(uijuij,2.0)/(pow(uijuij,2.0) + pow(Omega_aux,2.0) + 1e-20);
+
+           /*---- Ducros sensor for neighbor points of iPoint to avoid lower the dissipation in regions near the shock ---*/
+
+            Ducros_aux = 0.0;
+            nNeigh = geometry->node[iPoint]->GetnPoint();
+            for (iNeigh=0;iNeigh<nNeigh;++iNeigh){
+                NumNeigh = geometry->node[iPoint]->GetPoint(iNeigh);
+                Gradient_aux = node[NumNeigh]->GetGradient_Primitive();
+                Vorticity_aux = node[NumNeigh]->GetVorticity();
+                //cout<< Vorticity_aux[0] << " " << Gradient_aux[0][0] << endl;
+                uijuij=0.0;
+                for(iDim=0;iDim<nDim;++iDim){
+                    for(jDim=0;jDim<nDim;++jDim){
+                        uijuij+= Gradient_aux[1+iDim][jDim]*Gradient_aux[1+iDim][jDim];}}
+                uijuij=sqrt(fabs(uijuij));
+                uijuij=max(uijuij,1e-10);
+
+                Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+                
+                Ducros_aux = max(Ducros_aux, pow(uijuij,2.0)/(pow(uijuij,2.0) + pow(Omega_aux,2.0) + 1e-20));
+            }
+            Ducros_i = min(max(Ducros_aux,Ducros_i),1.0);
+          
+          /*--- For jPoint ---*/
+          
+          Laminar_Viscosity_aux = V_j[nDim+5] /V_j[nDim+2];
+          Eddy_Viscosity_aux = V_j[nDim+6]/V_j[nDim+2];
+          StrainMag_aux = node[jPoint]->GetStrainMag();
+          Vorticity_aux = node[jPoint]->GetVorticity();
+          Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+          
+          Omega_2 = pow(Omega_aux,2.0);
+          StrainMag_2 = pow(StrainMag_aux,2.0);
+          Baux = (ch3 * Omega_aux * max(StrainMag_aux, Omega_aux)) / max(sqrt((StrainMag_2+Omega_2)*0.5),1E-20);
+          Gaux = tanh(pow(Baux,4.0));
+          TimeScale = config->GetLength_Ref() / config->GetModVel_FreeStream();
+          
+          inv_TimeScale = 1.0/TimeScale;
+          
+          Kaux = max(sqrt((Omega_2 + StrainMag_2)*0.5), 0.1 * inv_TimeScale);
+          
+          Lturb = sqrt((Eddy_Viscosity_aux + Laminar_Viscosity_aux)/(pow(cnu,1.5)*Kaux));
+          Aaux = ch2 * max(((Const_DES*Delta_aux)/(Lturb*Gaux)) - 0.5, 0.0);
+          phi_hybrid_j = phi_max * tanh(pow(Aaux,ch1));
+          
+          /*---- Ducros sensor for jPoint ---*/
+          
+          uijuij=0.0;
+          
+          for(iDim=0;iDim<nDim;++iDim){
+              for(jDim=0;jDim<nDim;++jDim){
+                  uijuij+= Gradient_j[1+iDim][jDim]*Gradient_j[1+iDim][jDim];}}
+          
+          uijuij=sqrt(fabs(uijuij));
+          uijuij=max(uijuij,1e-10);
+          
+          Ducros_j = pow(uijuij,2.0)/(pow(uijuij,2.0) + pow(Omega_aux,2.0) + 1e-20);
+          
+          /*---- Ducros sensor for neighbor points of jPoint to avoid lowering the dissipation in regions near the shock ---*/
+          
+          Ducros_aux = 0.0;
+          nNeigh = geometry->node[jPoint]->GetnPoint();
+          for (iNeigh=0;iNeigh<nNeigh;++iNeigh){
+              NumNeigh = geometry->node[jPoint]->GetPoint(iNeigh);
+              Gradient_aux = node[NumNeigh]->GetGradient_Primitive();
+              Vorticity_aux = node[NumNeigh]->GetVorticity();
+
+              uijuij=0.0;
+              for(iDim=0;iDim<nDim;++iDim){
+                  for(jDim=0;jDim<nDim;++jDim){
+                      uijuij+= Gradient_aux[1+iDim][jDim]*Gradient_aux[1+iDim][jDim];}}
+              uijuij=sqrt(fabs(uijuij));
+              uijuij=max(uijuij,1e-10);
+              
+              Omega_aux = sqrt(Vorticity_aux[0]*Vorticity_aux[0]+ Vorticity_aux[1]*Vorticity_aux[1]+ Vorticity_aux[2]*Vorticity_aux[2]);
+              
+              Ducros_aux = max(Ducros_aux, pow(uijuij,2.0)/(pow(uijuij,2.0) + pow(Omega_aux,2.0) + 1e-20));
+          }
+          Ducros_j = min(max(Ducros_aux,Ducros_j),1.0);
+          
+          phi1 = 0.5*(Ducros_i+Ducros_j);
+          phi2 = 0.5*(phi_hybrid_i+phi_hybrid_j);
+          
+          dissipation = min(max(phi1 + phi2 - (phi1*phi2),0.05),1.0);
+          numerics->SetRoeDissipation(dissipation);
+      }
+      else if (config->GetKind_RoeLowDiss() == NO_ROELOWDISS){
+          dissipation = 1.0;
+          numerics->SetRoeDissipation(dissipation);
       }
 
       /*--- Recompute the extrapolated quantities in a
@@ -5343,7 +5714,7 @@ void CEulerSolver::Upwind_Residual(CGeometry *geometry, CSolver **solver_contain
       }
       
     }
-    
+      
     /*--- Compute the residual ---*/
     
     numerics->ComputeResidual(Res_Conv, Jacobian_i, Jacobian_j, config);
@@ -5370,7 +5741,7 @@ void CEulerSolver::Upwind_Residual(CGeometry *geometry, CSolver **solver_contain
     }
     
   }
-  
+
   /*--- Warning message about non-physical reconstructions ---*/
   
   if (config->GetConsole_Output_Verb() == VERB_HIGH) {
@@ -5381,7 +5752,6 @@ void CEulerSolver::Upwind_Residual(CGeometry *geometry, CSolver **solver_contain
 #endif
     if (iMesh == MESH_0) config->SetNonphysical_Reconstr(counter_global);
   }
-  
 }
 
 void CEulerSolver::ComputeConsExtrapolation(CConfig *config) {
@@ -7266,7 +7636,83 @@ void CEulerSolver::SetPrimitive_Limiter(CGeometry *geometry, CConfig *config) {
     }
     
   }
-  
+
+    /*--- Venkatakrishnan Modified limiter ---*/
+    /*---  Simple and Parameter-Free Second Slope Limiter for Unstructured Grid Aerodynamic Simulations. AIAA-J 2012 ---*/
+
+    if (config->GetKind_SlopeLimit_Flow() == VENKATAKRISHNAN_MOD) {
+
+    /*-- Get limiter parameters from the configuration file ---*/
+
+    dave = config->GetRefElemLength();
+    LimK = config->GetLimiterCoeff();
+    eps1 = LimK*dave;
+    eps2 = eps1*eps1*eps1;
+
+    for (iEdge = 0; iEdge < geometry->GetnEdge(); iEdge++) {
+        
+        iPoint     = geometry->edge[iEdge]->GetNode(0);
+        jPoint     = geometry->edge[iEdge]->GetNode(1);
+        Gradient_i = node[iPoint]->GetGradient_Primitive();
+        Gradient_j = node[jPoint]->GetGradient_Primitive();
+        Coord_i    = geometry->node[iPoint]->GetCoord();
+        Coord_j    = geometry->node[jPoint]->GetCoord();
+        
+        
+        AD::StartPreacc();
+        AD::SetPreaccIn(Gradient_i, nPrimVarGrad, nDim);
+        AD::SetPreaccIn(Gradient_j, nPrimVarGrad, nDim);
+        AD::SetPreaccIn(Coord_i, nDim); AD::SetPreaccIn(Coord_j, nDim);
+        
+        
+        for (iVar = 0; iVar < nPrimVarGrad; iVar++) {
+            
+            AD::SetPreaccIn(node[iPoint]->GetSolution_Max(iVar));
+            AD::SetPreaccIn(node[iPoint]->GetSolution_Min(iVar));
+            AD::SetPreaccIn(node[jPoint]->GetSolution_Max(iVar));
+            AD::SetPreaccIn(node[jPoint]->GetSolution_Min(iVar));
+            
+            /*--- Calculate the interface left gradient, delta- (dm) ---*/
+            
+            dm = 0.0;
+            for (iDim = 0; iDim < nDim; iDim++)
+                dm += 0.5*(Coord_j[iDim]-Coord_i[iDim])*Gradient_i[iVar][iDim];
+            
+            /*--- Calculate the interface right gradient, delta+ (dp) ---*/
+            
+            if ( dm > 0.0 ) dp = node[iPoint]->GetSolution_Max(iVar);
+            else dp = node[iPoint]->GetSolution_Min(iVar);
+            
+            limiter = ( dp*dp + 2.0*dp*dm + eps2 )/( dp*dp + dp*dm + 2.0*dm*dm + eps2);
+            
+            if (limiter < node[iPoint]->GetLimiter_Primitive(iVar)){
+                node[iPoint]->SetLimiter_Primitive(iVar, limiter);
+                AD::SetPreaccOut(node[iPoint]->GetLimiter_Primitive()[iVar]);
+            }
+            
+            /*-- Repeat for point j on the edge ---*/
+            
+            dm = 0.0;
+            for (iDim = 0; iDim < nDim; iDim++)
+                dm += 0.5*(Coord_i[iDim]-Coord_j[iDim])*Gradient_j[iVar][iDim];
+            
+            if ( dm > 0.0 ) dp = node[jPoint]->GetSolution_Max(iVar);
+            else dp = node[jPoint]->GetSolution_Min(iVar);
+            
+            limiter = ( dp*dp + 2.0*dp*dm + eps2 )/( dp*dp + dp*dm + 2.0*dm*dm + eps2);
+            
+            if (limiter < node[jPoint]->GetLimiter_Primitive(iVar)){
+                node[jPoint]->SetLimiter_Primitive(iVar, limiter);
+                AD::SetPreaccOut(node[jPoint]->GetLimiter_Primitive()[iVar]);
+            }
+        }
+        
+        AD::EndPreacc();
+        
+    }
+
+    }
+
   /*--- Limiter MPI ---*/
   
   Set_MPI_Primitive_Limiter(geometry, config);
@@ -10756,7 +11202,7 @@ void CEulerSolver::BC_Far_Field(CGeometry *geometry, CSolver **solver_container,
   bool tkeNeeded = (((config->GetKind_Solver() == RANS ) ||
                      (config->GetKind_Solver() == DISC_ADJ_RANS))
                     && (config->GetKind_Turb_Model() == SST));
-  
+    
   su2double *Normal = new su2double[nDim];
   
   /*--- Loop over all the vertices on this boundary marker ---*/
@@ -10955,8 +11401,11 @@ void CEulerSolver::BC_Far_Field(CGeometry *geometry, CSolver **solver_container,
                                   geometry->node[iPoint]->GetGridVel());
       }
       
+      /*--- Ensure no dissipation in the upwind scheme ---*/
+      conv_numerics->SetRoeDissipation(1.0);
+        
       /*--- Compute the convective residual using an upwind scheme ---*/
-      
+
       conv_numerics->ComputeResidual(Residual, Jacobian_i, Jacobian_j, config);
       
       /*--- Update residual value ---*/
@@ -12412,7 +12861,7 @@ void CEulerSolver::BC_Inlet(CGeometry *geometry, CSolver **solver_container,
   bool tkeNeeded = (((config->GetKind_Solver() == RANS )|| (config->GetKind_Solver() == DISC_ADJ_RANS)) &&
                     (config->GetKind_Turb_Model() == SST));
   su2double *Normal = new su2double[nDim];
-  
+    
   /*--- Loop over all the vertices on this boundary marker ---*/
   
   for (iVertex = 0; iVertex < geometry->nVertex[val_marker]; iVertex++) {
@@ -12686,6 +13135,9 @@ void CEulerSolver::BC_Inlet(CGeometry *geometry, CSolver **solver_container,
       if (grid_movement)
         conv_numerics->SetGridVel(geometry->node[iPoint]->GetGridVel(), geometry->node[iPoint]->GetGridVel());
       
+      /*--- Ensure no dissipation in the upwind scheme ---*/
+      conv_numerics->SetRoeDissipation(1.0);
+      
       /*--- Compute the residual using an upwind scheme ---*/
       
       conv_numerics->ComputeResidual(Residual, Jacobian_i, Jacobian_j, config);
@@ -12938,6 +13390,9 @@ void CEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
       if (grid_movement)
         conv_numerics->SetGridVel(geometry->node[iPoint]->GetGridVel(), geometry->node[iPoint]->GetGridVel());
       
+      /*--- Ensure no dissipation in the upwind scheme ---*/
+      conv_numerics->SetRoeDissipation(1.0);
+  
       /*--- Compute the residual using an upwind scheme ---*/
       conv_numerics->ComputeResidual(Residual, Jacobian_i, Jacobian_j, config);
       

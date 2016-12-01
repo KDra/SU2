@@ -4036,6 +4036,9 @@ void COutput::SetConvHistory_Header(ofstream *ConvHist_file, CConfig *config) {
   switch (config->GetKind_Turb_Model()) {
     case SA:	   SPRINTF (turb_resid, ",\"Res_Turb[0]\""); break;
     case SA_NEG: SPRINTF (turb_resid, ",\"Res_Turb[0]\""); break;
+    case SA_E: SPRINTF (turb_resid, ",\"Res_Turb[0]\""); break;
+    case SA_COMP: SPRINTF (turb_resid, ",\"Res_Turb[0]\""); break;
+    case SA_E_COMP: SPRINTF (turb_resid, ",\"Res_Turb[0]\""); break;
     case SST:   	SPRINTF (turb_resid, ",\"Res_Turb[0]\",\"Res_Turb[1]\""); break;
   }
   char adj_turb_resid[]= ",\"Res_AdjTurb[0]\"";
@@ -4312,6 +4315,9 @@ void COutput::SetConvHistory_Body(ofstream *ConvHist_file,
       switch (config[val_iZone]->GetKind_Turb_Model()) {
         case SA:	   nVar_Turb = 1; break;
         case SA_NEG: nVar_Turb = 1; break;
+        case SA_E: nVar_Turb = 1; break;
+        case SA_E_COMP: nVar_Turb = 1; break;
+        case SA_COMP: nVar_Turb = 1; break;
         case SST:    nVar_Turb = 2; break;
       }
     }
@@ -4331,6 +4337,9 @@ void COutput::SetConvHistory_Body(ofstream *ConvHist_file,
       switch (config[val_iZone]->GetKind_Turb_Model()) {
         case SA:	   nVar_AdjTurb = 1; break;
         case SA_NEG: nVar_AdjTurb = 1; break;
+        case SA_E: nVar_AdjTurb = 1; break;
+        case SA_COMP: nVar_AdjTurb = 1; break;
+        case SA_E_COMP: nVar_AdjTurb = 1; break;
         case SST:    nVar_AdjTurb = 2; break;
       }
     }
@@ -5179,6 +5188,9 @@ void COutput::SetConvHistory_Body(ofstream *ConvHist_file,
             switch (config[val_iZone]->GetKind_Turb_Model()) {
               case SA:	   cout << "       Res[nu]"; break;
               case SA_NEG: cout << "       Res[nu]"; break;
+              case SA_E: cout << "       Res[nu]"; break;
+              case SA_COMP: cout << "       Res[nu]"; break;
+              case SA_E_COMP: cout << "       Res[nu]"; break;
               case SST:	   cout << "     Res[kine]" << "     Res[omega]"; break;
             }
             

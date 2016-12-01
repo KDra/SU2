@@ -1731,6 +1731,22 @@ void CConfig::SetConfig_Options(unsigned short val_iZone, unsigned short val_nZo
 
   /* DESCRIPTION: Activate ParMETIS mode for testing */
   addBoolOption("PARMETIS", ParMETIS, false);
+    
+  /*--- options that are used in the Hybrid RANS/LES Simulations  ---*/
+  /*!\par CONFIG_CATEGORY:Hybrid_RANSLES Options\ingroup Config*/
+    
+  /* DESCRIPTION: Writing surface solution file frequency for dual time */
+  addUnsignedLongOption("WRT_SURF_FREQ_DUALTIME", Wrt_Surf_Freq_DualTime, 1);
+
+  /* DESCRIPTION: DES Constant */
+  addDoubleOption("DES_CONST", Const_DES, 0.65);
+    
+  /* DESCRIPTION: Specify Hybrid RANS/LES model */
+  addEnumOption("HYBRID_RANSLES", Kind_HybridRANSLES, HybridRANSLES_Map, NO_HYBRIDRANSLES);
+    
+  /* DESCRIPTION:  Roe with low dissipation for unsteady flows */
+  addEnumOption("ROE_LOW_DISSIPATION", Kind_RoeLowDiss, RoeLowDiss_Map, NO_ROELOWDISS);
+    
   
   /* END_CONFIG_OPTIONS */
 
@@ -3671,6 +3687,9 @@ void CConfig::SetOutput(unsigned short val_software, unsigned short val_izone) {
           case SA:     cout << "Spalart Allmaras" << endl; break;
           case SA_NEG: cout << "Negative Spalart Allmaras" << endl; break;
           case SST:    cout << "Menter's SST"     << endl; break;
+          case SA_E:   cout << "Edwards Spalart Allmaras" << endl; break;
+          case SA_COMP:   cout << "Compressibility Correction Spalart Allmaras" << endl; break;
+          case SA_E_COMP:   cout << "Compressibility Correction Edwards Spalart Allmaras" << endl; break;
         }
         break;
       case POISSON_EQUATION: cout << "Poisson equation." << endl; break;
@@ -4104,7 +4123,9 @@ void CConfig::SetOutput(unsigned short val_software, unsigned short val_izone) {
 				if (Kind_Upwind_Flow == HLLC)	cout << "HLLC solver for the flow inviscid terms."<< endl;
 				if (Kind_Upwind_Flow == SW)	cout << "Steger-Warming solver for the flow inviscid terms."<< endl;
 				if (Kind_Upwind_Flow == MSW)	cout << "Modified Steger-Warming solver for the flow inviscid terms."<< endl;
-        if (Kind_Upwind_Flow == CUSP)	cout << "CUSP solver for the flow inviscid terms."<< endl;
+              if (Kind_Upwind_Flow == CUSP)	cout << "CUSP solver for the flow inviscid terms."<< endl;
+              if (Kind_Upwind_Flow == L2ROE) cout << "L2ROE Low Mach ROE solver for the flow inviscid terms."<< endl;
+              if (Kind_Upwind_Flow == LMROE) cout << "Rieper Low Mach ROE solver for the flow inviscid terms."<< endl;
         switch (SpatialOrder_Flow) {
           case FIRST_ORDER: cout << "First order integration." << endl; break;
           case SECOND_ORDER: cout << "Second order integration." << endl; break;
@@ -4117,6 +4138,10 @@ void CConfig::SetOutput(unsigned short val_software, unsigned short val_izone) {
               case BARTH_JESPERSEN:
                 cout << "Barth-Jespersen slope-limiting method." << endl;
                 break;
+              case VENKATAKRISHNAN_MOD:
+                cout << "Venkatakrishnan slope-limiting method, with constant:. "<< endl;
+                break;
+                    
             }
             break;
         }

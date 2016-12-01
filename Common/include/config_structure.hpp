@@ -806,10 +806,14 @@ private:
   bool Prestretch;            /*!< Read a reference geometry for optimization purposes. */
   string Prestretch_FEMFileName;         /*!< \brief File name for reference geometry. */
   unsigned long Nonphys_Points, /*!< \brief Current number of non-physical points in the solution. */
-  Nonphys_Reconstr;           /*!< \brief Current number of non-physical reconstructions for 2nd-order upwinding. */
-  bool ParMETIS;              /*!< \brief Boolean for activating ParMETIS mode (while testing). */
-  unsigned short DirectDiff;  /*!< \brief Direct Differentation mode. */
-  bool DiscreteAdjoint;       /*!< \brief AD-based discrete adjoint mode. */
+  Nonphys_Reconstr;      /*!< \brief Current number of non-physical reconstructions for 2nd-order upwinding. */
+  bool ParMETIS;      /*!< \brief Boolean for activating ParMETIS mode (while testing). */
+  unsigned short DirectDiff; /*!< \brief Direct Differentation mode. */
+  bool DiscreteAdjoint; /*!< \brief AD-based discrete adjoint mode. */
+  unsigned long Wrt_Surf_Freq_DualTime;	/*!< \brief Writing surface solution frequency for Dual Time. */
+  double Const_DES;   /*!< \brief Detached Eddy Simulation Constant. */
+  unsigned short Kind_HybridRANSLES; /*!< \brief Kind of Hybrid RANS/LES. */
+  unsigned short Kind_RoeLowDiss;    /*!< \brief Kind of Roe scheme with low dissipation for unsteady flows. */
   su2double *default_vel_inf, /*!< \brief Default freestream velocity array for the COption class. */
   *default_eng_box,           /*!< \brief Default engine box array for the COption class. */
   *default_eng_val,           /*!< \brief Default engine box array values for the COption class. */
@@ -4623,7 +4627,7 @@ public:
 	 * \return <code>TRUE</code> if we are using low Mach correction; otherwise <code>FALSE</code>.
 	 */
 	bool Low_Mach_Correction(void);
-
+    
 	/*!
 	 * \brief Get information about the poisson solver condition
 	 * \return <code>TRUE</code> if it is a poisson solver condition; otherwise <code>FALSE</code>.
@@ -6768,10 +6772,35 @@ public:
 	 */
 	inline unsigned short GetKindInterpolation(void);
 
-  /*!
-   * \brief Get the AD support.
-   */
-  bool GetAD_Mode(void);
+    /*!
+     * \brief Get the AD support.
+     */
+    bool GetAD_Mode(void);
+    
+    /*!
+     * \brief Get the frequency for writing the surface solution file in Dual Time.
+     * \return It writes the surface solution file with this frequency.
+     */
+    unsigned long GetWrt_Surf_Freq_DualTime(void);
+    
+    /*!
+     * \brief Get the Kind of Hybrid RANS/LES.
+     * \return Verbosity level for the console output.
+     */
+    unsigned short GetKind_HybridRANSLES(void);
+
+    /*!
+     * \brief Get the Kind of Roe Low Dissipation Scheme for Unsteady flows.
+     * \return Verbosity level for the console output.
+     */
+    unsigned short GetKind_RoeLowDiss(void);
+    
+    /*!
+     * \brief Get the DES Constant.
+     * \return Verbosity level for the console output.
+     */
+    double GetConst_DES(void);
+    
 };
 
 #include "config_structure.inl"
