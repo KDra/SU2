@@ -62,7 +62,7 @@ class TestCase:
 
     def run_test(self):
 
-        print '==================== Start Test: %s ===================='%self.tag
+        print( '==================== Start Test: %s ===================='%self.tag)
         passed       = True
         exceed_tol   = False
         timed_out    = False
@@ -79,7 +79,7 @@ class TestCase:
         # Run SU2
         workdir = os.getcwd()
         os.chdir(self.cfg_dir)
-        print os.getcwd()
+        print( os.getcwd())
         start   = datetime.datetime.now()
         process = subprocess.Popen(command, shell=True)  # This line launches SU2
 
@@ -123,7 +123,7 @@ class TestCase:
                     if iter_number == self.test_iter:  # Found the iteration number we're checking for
                         iter_missing = False
                         if not len(self.test_vals)==len(data):   # something went wrong... probably bad input
-                            print "Error in test_vals!"
+                            print( "Error in test_vals!")
                             passed = False
                             break
                         for j in range(len(data)):
@@ -144,54 +144,54 @@ class TestCase:
 
         # Write the test results 
         #for j in output:
-        #  print j
+        #  print(j
 
         if passed:
-            print "%s: PASSED"%self.tag
+            print( "%s: PASSED"%self.tag)
         else:
-            print "%s: FAILED"%self.tag
-            print 'Output for the failed case'
+            print( "%s: FAILED"%self.tag)
+            print( 'Output for the failed case')
             subprocess.call(['cat', logfilename])      
 
-        print 'execution command: %s'%command
+        print( 'execution command: %s'%command)
 
         if timed_out:
-            print 'ERROR: Execution timed out. timeout=%d'%self.timeout
+            print( 'ERROR: Execution timed out. timeout=%d'%self.timeout)
 
         if exceed_tol:
-            print 'ERROR: Difference between computed input and test_vals exceeded tolerance. TOL=%f'%self.tol
+            print( 'ERROR: Difference between computed input and test_vals exceeded tolerance. TOL=%f'%self.tol)
 
         if not start_solver:
-            print 'ERROR: The code was not able to get to the "Begin solver" section.'
+            print( 'ERROR: The code was not able to get to the "Begin solver" section.')
 
         if iter_missing:
-            print 'ERROR: The iteration number %d could not be found.'%self.test_iter
+            print( 'ERROR: The iteration number %d could not be found.'%self.test_iter)
 
-        print 'test_iter=%d \n'%self.test_iter,
+        print('test_iter=%d \n'%self.test_iter,)
 
-        print 'test_vals (stored): ',
+        print( 'test_vals (stored): ',)
         for j in self.test_vals:
-            print '%f,'%j,
-        print '\n',
+            print( '%f,'%j,)
+        print( '\n',)
 
-        print 'sim_vals (computed): ',
+        print( 'sim_vals (computed): ',)
         for j in sim_vals:
-            print '%f,'%j,
-        print '\n',
+            print( '%f,'%j,)
+        print( '\n',)
 
-        print 'delta_vals: ',
+        print( 'delta_vals: ',)
         for j in delta_vals:
-            print '%f,'%j,
-        print '\n',
+            print( '%f,'%j,)
+        print( '\n',)
 
-        print 'test duration: %.2f min'%(running_time/60.0) 
-        print '==================== End Test: %s ====================\n'%self.tag
+        print( 'test duration: %.2f min'%(running_time/60.0) )
+        print( '==================== End Test: %s ====================\n'%self.tag)
 
         os.chdir(workdir)
         return passed
 
     def run_filediff(self):
-        print '==================== Start Test: %s ===================='%self.tag
+        print( '==================== Start Test: %s ===================='%self.tag)
         passed       = True
         timed_out    = False
 
@@ -205,7 +205,7 @@ class TestCase:
         # Run SU2
         workdir = os.getcwd()
         os.chdir(self.cfg_dir)
-        print os.getcwd()
+        print( os.getcwd())
         start   = datetime.datetime.now()
         process = subprocess.Popen(command, shell=True)  # This line launches SU2
 
@@ -241,21 +241,21 @@ class TestCase:
                 passed=True
             else:
                 for line in diff:
-                    print line[:-1]
+                    print( line[:-1])
                 passed=False
 
         else:
             passed = False
 
-        print 'test duration: %.2f min'%(running_time/60.0)
-        print '==================== End Test: %s ====================\n'%self.tag
+        print( 'test duration: %.2f min'%(running_time/60.0))
+        print( '==================== End Test: %s ====================\n'%self.tag)
 
         os.chdir(workdir)
         return passed
 
     def run_opt(self):
 
-        print '==================== Start Test: %s ===================='%self.tag
+        print( '==================== Start Test: %s ===================='%self.tag)
         passed       = True
         exceed_tol   = False
         timed_out    = False
@@ -272,7 +272,7 @@ class TestCase:
         # Run SU2
         workdir = os.getcwd()
         os.chdir(self.cfg_dir)
-        print os.getcwd()
+        print( os.getcwd())
         start   = datetime.datetime.now()
         process = subprocess.Popen(command, shell=True)  # This line launches SU2
 
@@ -314,7 +314,7 @@ class TestCase:
                     if iter_number == self.test_iter:  # Found the iteration number we're checking for
                         iter_missing = False
                         if not len(self.test_vals)==len(data):   # something went wrong... probably bad input
-                            print "Error in test_vals!"
+                            print( "Error in test_vals!")
                             passed = False
                             break
                         for j in range(len(data)):
@@ -335,55 +335,55 @@ class TestCase:
 
         # Write the test results 
         #for j in output:
-        #  print j
+        #  print(j
 
         if passed:
-            print "%s: PASSED"%self.tag
+            print( "%s: PASSED"%self.tag)
         else:
-            print "%s: FAILED"%self.tag
-            print 'Output for the failed case'
+            print( "%s: FAILED"%self.tag)
+            print( 'Output for the failed case')
             subprocess.call(['cat', logfilename])      
 
-        print 'execution command: %s'%command
+        print( 'execution command: %s'%command)
 
         if timed_out:
-            print 'ERROR: Execution timed out. timeout=%d'%self.timeout
+            print( 'ERROR: Execution timed out. timeout=%d'%self.timeout)
 
         if exceed_tol:
-            print 'ERROR: Difference between computed input and test_vals exceeded tolerance. TOL=%f'%self.tol
+            print( 'ERROR: Difference between computed input and test_vals exceeded tolerance. TOL=%f'%self.tol)
 
         if not start_solver:
-            print 'ERROR: The code was not able to get to the "OBJFUN" section.'
+            print( 'ERROR: The code was not able to get to the "OBJFUN" section.')
 
         if iter_missing:
-            print 'ERROR: The optimizer iteration number %d could not be found.'%self.test_iter
+            print( 'ERROR: The optimizer iteration number %d could not be found.'%self.test_iter)
 
-        print 'test_iter=%d \n'%self.test_iter,
+        print( 'test_iter=%d \n'%self.test_iter,)
 
-        print 'test_vals (stored): ',
+        print( 'test_vals (stored): ',)
         for j in self.test_vals:
-            print '%f,'%j,
-        print '\n',
+            print( '%f,'%j,)
+        print( '\n',)
 
-        print 'sim_vals (computed): ',
+        print( 'sim_vals (computed): ',)
         for j in sim_vals:
-            print '%f,'%j,
-        print '\n',
+            print( '%f,'%j,)
+        print('\n',)
 
-        print 'delta_vals: ',
+        print('delta_vals: ',)
         for j in delta_vals:
-            print '%f,'%j,
-        print '\n',
+            print('%f,'%j,)
+        print('\n',)
 
-        print 'test duration: %.2f min'%(running_time/60.0) 
-        print '==================== End Test: %s ====================\n'%self.tag
+        print('test duration: %.2f min'%(running_time/60.0) )
+        print('==================== End Test: %s ====================\n'%self.tag)
 
         os.chdir(workdir)
         return passed
 
     def run_geo(self):
 
-        print '==================== Start Test: %s ===================='%self.tag
+        print('==================== Start Test: %s ===================='%self.tag)
         passed       = True
         exceed_tol   = False
         timed_out    = False
@@ -402,7 +402,7 @@ class TestCase:
         # Run SU2
         workdir = os.getcwd()
         os.chdir(self.cfg_dir)
-        print os.getcwd()
+        print(os.getcwd())
         start   = datetime.datetime.now()
         process = subprocess.Popen(command, shell=True)  # This line launches SU2
 
@@ -460,7 +460,7 @@ class TestCase:
             if found_thick and found_area and found_twist and found_chord:  # Found what we're checking for
                 iter_missing = False
                 if not len(self.test_vals)==len(data):   # something went wrong... probably bad input
-                    print "Error in test_vals!"
+                    print("Error in test_vals!")
                     passed = False
                 for j in range(len(data)):
                     sim_vals.append( float(data[j]) )
@@ -479,53 +479,53 @@ class TestCase:
 
         # Write the test results 
         #for j in output:
-        #  print j
+        #  print(j
 
         if passed:
-            print "%s: PASSED"%self.tag
+            print("%s: PASSED"%self.tag)
         else:
-            print "%s: FAILED"%self.tag
-            print 'Output for the failed case'
+            print("%s: FAILED"%self.tag)
+            print('Output for the failed case')
             subprocess.call(['cat', logfilename])      
 
-        print 'execution command: %s'%command
+        print('execution command: %s'%command)
 
         if timed_out:
-            print 'ERROR: Execution timed out. timeout=%d'%self.timeout
+            print('ERROR: Execution timed out. timeout=%d'%self.timeout)
 
         if exceed_tol:
-            print 'ERROR: Difference between computed input and test_vals exceeded tolerance. TOL=%f'%self.tol
+            print('ERROR: Difference between computed input and test_vals exceeded tolerance. TOL=%f'%self.tol)
 
         if not start_solver:
-            print 'ERROR: The code was not able to get to the "OBJFUN" section.'
+            print('ERROR: The code was not able to get to the "OBJFUN" section.')
 
         if iter_missing:
-            print 'ERROR: The SU2_GEO values could not be found.'
+            print('ERROR: The SU2_GEO values could not be found.')
 
-        print 'test_vals (stored): ',
+        print('test_vals (stored): ',)
         for j in self.test_vals:
-            print '%f,'%j,
-        print '\n',
+            print('%f,'%j,)
+        print('\n',)
 
-        print 'sim_vals (computed): ',
+        print('sim_vals (computed): ',)
         for j in sim_vals:
-            print '%f,'%j,
-        print '\n',
+            print('%f,'%j,)
+        print('\n',)
 
-        print 'delta_vals: ',
+        print('delta_vals: ',)
         for j in delta_vals:
-            print '%f,'%j,
-        print '\n',
+            print('%f,'%j,)
+        print('\n',)
 
-        print 'test duration: %.2f min'%(running_time/60.0) 
-        print '==================== End Test: %s ====================\n'%self.tag
+        print('test duration: %.2f min'%(running_time/60.0) )
+        print('==================== End Test: %s ====================\n'%self.tag)
 
         os.chdir(workdir)
         return passed
 
     def run_def(self):
     
-        print '==================== Start Test: %s ===================='%self.tag
+        print('==================== Start Test: %s ===================='%self.tag)
         passed       = True
         exceed_tol   = False
         timed_out    = False
@@ -539,7 +539,7 @@ class TestCase:
         # Run SU2
         workdir = os.getcwd()
         os.chdir(self.cfg_dir)
-        print os.getcwd()
+        print(os.getcwd())
         start   = datetime.datetime.now()
         process = subprocess.Popen(command, shell=True)  # This line launches SU2
     
@@ -581,7 +581,7 @@ class TestCase:
                     if iter_number == self.test_iter:  # Found the iteration number we're checking for
                         iter_missing = False
                         if not len(self.test_vals)==len(data):   # something went wrong... probably bad input
-                            print "Error in test_vals!"
+                            print("Error in test_vals!")
                             passed = False
                             break
                         for j in range(len(data)):
@@ -602,48 +602,48 @@ class TestCase:
     
         # Write the test results 
         #for j in output:
-        #  print j
+        #  print(j
     
         if passed:
-            print "%s: PASSED"%self.tag
+            print("%s: PASSED"%self.tag)
         else:
-            print "%s: FAILED"%self.tag
-            print 'Output for the failed case'
+            print("%s: FAILED"%self.tag)
+            print('Output for the failed case')
             subprocess.call(['cat', logfilename])      
     
-        print 'execution command: %s'%command
+        print('execution command: %s'%command)
     
         if timed_out:
-            print 'ERROR: Execution timed out. timeout=%d sec'%self.timeout
+            print('ERROR: Execution timed out. timeout=%d sec'%self.timeout)
     
         if exceed_tol:
-            print 'ERROR: Difference between computed input and test_vals exceeded tolerance. TOL=%e'%self.tol
+            print('ERROR: Difference between computed input and test_vals exceeded tolerance. TOL=%e'%self.tol)
     
         if not start_solver:
-            print 'ERROR: The code was not able to get to the "Begin solver" section.'
+            print('ERROR: The code was not able to get to the "Begin solver" section.')
     
         if iter_missing:
-            print 'ERROR: The iteration number %d could not be found.'%self.test_iter
+            print('ERROR: The iteration number %d could not be found.'%self.test_iter)
     
-        print 'test_iter=%d \n'%self.test_iter,
+        print('test_iter=%d \n'%self.test_iter,)
     
-        print 'test_vals (stored): ',
+        print('test_vals (stored): ',)
         for j in self.test_vals:
-            print '%e'%j,
-        print '\n',
+            print('%e'%j,)
+        print('\n',)
     
-        print 'sim_vals (computed): ',
+        print('sim_vals (computed): ',)
         for j in sim_vals:
-            print '%e'%j,
-        print '\n',
+            print('%e'%j,)
+        print('\n',)
     
-        print 'delta_vals: ',
+        print('delta_vals: ',)
         for j in delta_vals:
-            print '%e'%j,
-        print '\n',
+            print('%e'%j,)
+        print('\n',)
     
-        print 'test duration: %.2f min'%(running_time/60.0) 
-        print '==================== End Test: %s ====================\n'%self.tag
+        print('test duration: %.2f min'%(running_time/60.0) )
+        print('==================== End Test: %s ====================\n'%self.tag)
     
         os.chdir(workdir)
         return passed    
