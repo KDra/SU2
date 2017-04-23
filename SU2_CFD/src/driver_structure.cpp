@@ -37,7 +37,9 @@
 CDriver::CDriver(char* confFile,
                  unsigned short val_nZone,
                  unsigned short val_nDim,
-                 SU2_Comm MPICommunicator):config_file_name(confFile), StartTime(0.0), StopTime(0.0), UsedTime(0.0), ExtIter(0), nZone(val_nZone), nDim(val_nDim), StopCalc(false), fsi(false) {
+                 SU2_Comm MPICommunicator):config_file_name(confFile),
+				 StartTime(0.0), StopTime(0.0), UsedTime(0.0), ExtIter(0),
+				 nZone(val_nZone), nDim(val_nDim), StopCalc(false), fsi(false) {
 
 
   unsigned short jZone, iSol;
